@@ -32,3 +32,41 @@ test("classe un dossier sourcé", async () => { const provider = createFakeProvi
     "origine": "donnée synthétique"
   }
 }, provider); assert.equal(result.decision, "partial_overlap"); assert.equal(result.review, false); });
+
+const dossierÀRevoir = {
+  "id": "revue-1",
+  "text": "Deux résumés partagent un terrain et une méthode, mais leurs questions de recherche et livrables semblent distincts.",
+  "source": {
+    "url": "https://example.test/dossier-ambigu",
+    "date": "2026-09-20"
+  },
+  "details": {
+    "origine": "donnée synthétique",
+    "signal": "informations incomplètes"
+  }
+};
+
+test("marque une décision incertaine pour revue humaine", async () => {
+  const provider = createFakeProvider(() => ({
+    model: "jev-1.13.0",
+    answers: {
+      decision: {
+        type: "choice",
+        choice: "partial_overlap",
+        probabilities: {
+          strong_overlap: 0.15,
+          partial_overlap: 0.55,
+          distinct: 0.15,
+          same_project: 0.15,
+        },
+        confidence: 0.62,
+      },
+    },
+    usage: { input_tokens: 10, output_tokens: 0 },
+  }));
+  const résultat = await detectResearchOverlap(dossierÀRevoir, provider);
+  assert.equal(résultat.decision, "partial_overlap");
+  assert.equal(résultat.review, true);
+  assert.equal(résultat.confidence, 0.62);
+  assert.equal(provider.calls, 1);
+});
